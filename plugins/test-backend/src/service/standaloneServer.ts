@@ -1,9 +1,8 @@
-import { createServiceBuilder, loadBackendConfig } from '@backstage/backend-common';
+import { DatabaseManager, createServiceBuilder, loadBackendConfig } from '@backstage/backend-common';
 import { Server } from 'http';
 import { Logger } from 'winston';
 import { createRouter } from './router';
 import { TestDatabase } from '../database/TestDatabase';
-import Knex from 'knex';
 
 export interface ServerOptions {
   port: number;
@@ -18,8 +17,9 @@ export async function startStandaloneServer(
 
   const config = await loadBackendConfig({ logger, argv: process.argv });
   
-  const knexInstance = Knex(config.get('backend.database'));
-  const database = await TestDatabase.create({ database: { getClient: async () => knexInstance } });
+  const databaseManager = DatabaseManager.fromConfig(config);
+  const pluginManager = databaseManager.forPlugin('test');
+  const database = await TestDatabase.create({ database: pluginManager });
 
   logger.debug('Starting application server...');
   const router = await createRouter({
